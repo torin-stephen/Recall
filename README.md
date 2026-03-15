@@ -5,6 +5,7 @@ A clean, locally-hosted Quizlet clone with flashcards, learn mode, and Quizlet i
 ## Quick Start
 
 **Double-click `Recall.command`** in Finder — the app opens in your browser automatically.
+You may need to go to **Settings** -> **Privacy and Security** -> **Security** -> **Run app this time**
 
 Or from Terminal:
 ```
