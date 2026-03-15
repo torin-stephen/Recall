@@ -36,3 +36,20 @@ Back it up to keep your data safe.
 - `Space` / `→` — Next card
 - `←` — Previous card  
 - `F` / `↑` — Flip card
+
+## Screenshots
+
+### Dashboard
+![Dashboard](media/dashboard.png)
+
+### Create Set
+![Create Set](media/createset.png)
+
+### Flashcards
+![Flashcards](media/flashcards.png)
+
+### Learn
+![Learn](media/learn.png)
+
+### Import
+![Import](media/import.png)
