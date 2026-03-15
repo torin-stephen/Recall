@@ -1,5 +1,5 @@
 {
-  "name": "quizlet-clone",
+  "name": "recall",
   "version": "1.0.0",
   "description": "Local flashcard study app",
   "main": "server.js",
