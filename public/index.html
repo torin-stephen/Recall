@@ -1,774 +1,1489 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Recall — Flashcard Study App</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #f7f5f2; --surface: #ffffff; --surface2: #f0ede8; --border: #e2ddd6;
-    --text: #1a1816; --text2: #6b6560; --text3: #a09890;
-    --accent: #2d5be3; --accent-light: #eef1fd; --accent-hover: #1e47cc;
-    --green: #1a9e6b; --green-light: #e8f7f2;
-    --red: #dc3545; --red-light: #fdedf0;
-    --yellow-light: #fef6e4;
-    --radius: 14px; --radius-sm: 8px;
-    --shadow: 0 2px 12px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
-    --t: 0.18s ease;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 15px; line-height: 1.5; }
-  #app { display: flex; flex-direction: column; min-height: 100vh; }
-
-  /* Topbar */
-  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; height: 56px; display: flex; align-items: center; gap: 24px; position: sticky; top: 0; z-index: 100; }
-  .logo { font-family: 'DM Serif Display', serif; font-size: 22px; cursor: pointer; user-select: none; }
-  .logo span { color: var(--accent); }
-  .topbar-right { margin-left: auto; display: flex; gap: 10px; }
-  .main { flex: 1; max-width: 900px; margin: 0 auto; width: 100%; padding: 32px 24px; }
-
-  /* Buttons */
-  .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all var(--t); white-space: nowrap; text-decoration: none; }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,91,227,0.3); }
-  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-secondary:hover { background: var(--border); }
-  .btn-ghost { background: transparent; color: var(--text2); }
-  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
-  .btn-sm { padding: 6px 13px; font-size: 13px; }
-  .btn-lg { padding: 13px 28px; font-size: 15px; font-weight: 600; }
-  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-
-  /* Home */
-  .home-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
-  .home-header h1 { font-family: 'DM Serif Display', serif; font-size: 28px; font-weight: 400; }
-  .sets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-  .set-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all var(--t); box-shadow: var(--shadow); }
-  .set-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: #c8c3bc; }
-  .set-card-title { font-size: 16px; font-weight: 600; margin-bottom: 5px; line-height: 1.3; }
-  .set-card-meta { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
-  .set-card-progress { height: 4px; background: var(--surface2); border-radius: 2px; margin-bottom: 14px; }
-  .set-card-progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
-  .set-card-actions { display: flex; gap: 8px; }
-  .empty-state { text-align: center; padding: 80px 40px; color: var(--text2); }
-  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
-  .empty-state h2 { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--text); margin-bottom: 8px; font-weight: 400; }
-  .empty-state p { margin-bottom: 24px; }
-
-  /* Modal */
-  .overlay { position: fixed; inset: 0; background: rgba(20,18,14,0.45); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; animation: fadeIn 0.15s ease; }
-  .modal { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; animation: slideUp 0.2s ease; }
-  .modal-hd { padding: 24px 24px 0; display: flex; align-items: center; justify-content: space-between; }
-  .modal-hd h2 { font-family: 'DM Serif Display', serif; font-size: 20px; font-weight: 400; }
-  .modal-bd { padding: 20px 24px 24px; }
-  .modal-ft { padding: 0 24px 24px; display: flex; gap: 10px; justify-content: flex-end; }
-
-  /* Forms */
-  .fg { margin-bottom: 16px; }
-  .fl { display: block; font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .fi { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); background: var(--surface); outline: none; transition: border-color var(--t); }
-  .fi:focus { border-color: var(--accent); }
-  textarea.fi { resize: vertical; min-height: 80px; }
-  .term-num { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid var(--border); padding-top: 14px; margin: 10px 0 8px; }
-  .term-num.first { border-top: none; padding-top: 0; margin-top: 0; }
-  .term-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; }
-  .rm-btn { padding: 10px 8px; color: var(--text3); background: none; border: none; cursor: pointer; border-radius: 6px; font-size: 18px; transition: all var(--t); align-self: start; margin-top: 2px; }
-  .rm-btn:hover { background: var(--red-light); color: var(--red); }
-  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-
-  /* Set detail */
-  .set-title { font-family: 'DM Serif Display', serif; font-size: 30px; font-weight: 400; line-height: 1.2; margin-bottom: 6px; }
-  .set-desc { color: var(--text2); font-size: 14px; }
-  .set-stats { display: flex; gap: 24px; margin-bottom: 20px; }
-  .stat-num { font-size: 22px; font-weight: 600; color: var(--accent); }
-  .stat-lbl { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
-  .study-modes { display: flex; gap: 12px; margin-bottom: 32px; }
-  .mode-card { flex: 1; padding: 20px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: center; transition: all var(--t); }
-  .mode-card:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); transform: translateY(-1px); }
-  .mode-icon { font-size: 28px; margin-bottom: 8px; }
-  .mode-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; }
-  .mode-desc { font-size: 12px; color: var(--text2); }
-  .terms-list { display: grid; gap: 8px; }
-  .term-item { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-  .term-side { padding: 14px 16px; font-size: 14px; line-height: 1.5; }
-  .term-side.front { border-right: 1px solid var(--border); font-weight: 500; }
-  .term-side.back { color: var(--text2); }
-
-  /* Tabs */
-  .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
-  .tab { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--t); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab:hover { color: var(--text); }
-
-  /* Flashcards */
-  .fc-wrap { display: flex; flex-direction: column; align-items: center; gap: 24px; }
-  .pbar-wrap { width: 100%; height: 4px; background: var(--surface2); border-radius: 2px; }
-  .pbar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; }
-  .flashcard { width: 100%; max-width: 640px; height: 340px; perspective: 1200px; cursor: pointer; }
-  .fc-inner { width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(0.4,0,0.2,1); position: relative; }
-  .flashcard.flipped .fc-inner { transform: rotateY(180deg); }
-  .fc-face { position: absolute; inset: 0; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-  .fc-face.back { transform: rotateY(180deg); background: var(--accent-light); border-color: #c5d1f7; }
-  .fc-lbl { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
-  .fc-text { font-size: 22px; line-height: 1.4; font-weight: 500; }
-  .fc-hint { font-size: 12px; color: var(--text3); margin-top: 16px; }
-  .fc-nav { display: flex; align-items: center; gap: 16px; }
-
-  /* Learn */
-  .learn-wrap { max-width: 640px; margin: 0 auto; }
-  .learn-q-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 36px; margin-bottom: 20px; box-shadow: var(--shadow); text-align: center; }
-  .learn-ql { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
-  .learn-q { font-size: 22px; font-weight: 500; line-height: 1.4; }
-  .learn-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-  .learn-opt { padding: 16px 20px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; text-align: left; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text); transition: all var(--t); line-height: 1.4; min-height: 60px; display: flex; align-items: center; }
-  .learn-opt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-light); }
-  .learn-opt.correct { background: var(--green-light) !important; border-color: var(--green) !important; color: var(--green) !important; }
-  .learn-opt.wrong { background: var(--red-light) !important; border-color: var(--red) !important; color: var(--red) !important; }
-  .learn-opt:disabled { cursor: default; }
-  .learn-fb { text-align: center; padding: 16px; border-radius: var(--radius-sm); font-weight: 600; margin-bottom: 16px; font-size: 15px; animation: fadeIn 0.2s ease; }
-  .learn-fb.correct { background: var(--green-light); color: var(--green); }
-  .learn-fb.wrong { background: var(--red-light); color: var(--red); }
-  .stats-bar { display: flex; gap: 20px; justify-content: center; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 20px; font-size: 14px; }
-  .sb-item { display: flex; align-items: center; gap: 6px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; }
-  .dot.g { background: var(--green); }
-  .dot.r { background: var(--red); }
-
-  /* Summary */
-  .summary { text-align: center; padding: 60px 40px; max-width: 540px; margin: 0 auto; }
-  .summary h2 { font-family: 'DM Serif Display', serif; font-size: 32px; font-weight: 400; margin-bottom: 8px; }
-  .summary-score { font-size: 64px; font-weight: 300; color: var(--accent); margin: 24px 0 8px; line-height: 1; }
-  .summary-stats { display: flex; justify-content: center; gap: 32px; margin-bottom: 32px; }
-  .sv { font-size: 24px; font-weight: 600; margin-bottom: 2px; }
-  .sv.g { color: var(--green); }
-  .sv.r { color: var(--red); }
-
-  /* Import */
-  .url-row { display: flex; gap: 10px; }
-  .url-row .fi { flex: 1; }
-  .imp-status { margin-top: 16px; padding: 14px 16px; border-radius: var(--radius-sm); font-size: 14px; }
-  .imp-status.loading { background: var(--accent-light); color: var(--accent); }
-  .imp-status.error { background: var(--red-light); color: var(--red); }
-  .imp-status.success { background: var(--green-light); color: var(--green); }
-  .drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: all var(--t); color: var(--text2); font-size: 14px; display: block; }
-  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
-  .drop-zone input[type=file] { display: none; }
-
-  /* Back btn */
-  .back-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); font-size: 14px; cursor: pointer; margin-bottom: 20px; background: none; border: none; font-family: inherit; padding: 0; transition: color var(--t); }
-  .back-btn:hover { color: var(--text); }
-
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-  .page { animation: fadeIn 0.2s ease; }
-</style>
-</head>
-<body>
-<div id="app">
-  <div class="topbar">
-    <div class="logo" onclick="goHome()">Recall<span>.</span></div>
-    <div class="topbar-right">
-      <button class="btn btn-secondary btn-sm" onclick="showImportModal()">&#8595; Import</button>
-      <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ New Set</button>
-    </div>
-  </div>
-  <div class="main" id="root"></div>
-</div>
-
-<!-- Modal shell -->
-<div id="overlay" style="display:none" class="overlay" onclick="overlayClick(event)">
-  <div class="modal">
-    <div class="modal-hd">
-      <h2 id="modal-title"></h2>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">&#10005;</button>
-    </div>
-    <div class="modal-bd" id="modal-body"></div>
-    <div class="modal-ft" id="modal-foot"></div>
-  </div>
-</div>
-
-<script>
-// ───────────────────────────────────────────────
-// State
-// ───────────────────────────────────────────────
-var S = {
-  page: 'home',
-  sets: [],
-  currentSet: null,
-  editingSet: null,
-  editCards: [],
-  fc: { index: 0, flipped: false, deck: [] },
-  lrn: { queue: [], idx: 0, answered: false, selected: null, correct: [], wrong: [], opts: [], all: [] }
-};
-
-// ───────────────────────────────────────────────
-// API helpers
-// ───────────────────────────────────────────────
-function apiFetch(method, path, body) {
-  return fetch(path, {
-    method: method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined
-  }).then(function(r) { return r.json(); });
-}
-
-// ───────────────────────────────────────────────
-// Routing
-// ───────────────────────────────────────────────
-function goHome() { S.page = 'home'; render(); }
-
-function render() {
-  if (S.page === 'home') renderHome();
-  else if (S.page === 'set') renderSet();
-  else if (S.page === 'fc') renderFC();
-  else if (S.page === 'learn') renderLearn();
-  else if (S.page === 'done') renderDone();
-}
-
-// ───────────────────────────────────────────────
-// HOME
-// ───────────────────────────────────────────────
-function renderHome() {
-  apiFetch('GET', '/api/sets').then(function(sets) {
-    S.sets = sets;
-    var el = document.getElementById('root');
-
-    if (!sets.length) {
-      el.innerHTML =
-        '<div class="page">' +
-        '<div class="home-header"><h1>Your Sets</h1></div>' +
-        '<div class="empty-state">' +
-        '<div class="icon">&#128218;</div>' +
-        '<h2>No sets yet</h2>' +
-        '<p>Create your first flashcard set or import one from Quizlet.</p>' +
-        '<div style="display:flex;gap:12px;justify-content:center">' +
-        '<button class="btn btn-primary btn-lg" onclick="showCreateModal()">+ Create Set</button>' +
-        '<button class="btn btn-secondary btn-lg" onclick="showImportModal()">&#8595; Import from Quizlet</button>' +
-        '</div></div></div>';
-      return;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recall — Flashcard Study App</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill=''/><text x='16' y='24' font-family='Georgia,serif' font-size='22' font-weight='400' text-anchor='middle' fill='white'>R</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f5f2;
+      --surface: #ffffff;
+      --surface2: #f0ede8;
+      --border: #e2ddd6;
+      --text: #1a1816;
+      --text2: #6b6560;
+      --text3: #a09890;
+      --accent: #2d5be3;
+      --accent-light: #eef1fd;
+      --accent-hover: #1e47cc;
+      --green: #1a9e6b;
+      --green-light: #e8f7f2;
+      --red: #dc3545;
+      --red-light: #fdedf0;
+      --yellow-light: #fef6e4;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 2px 12px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
+      --t: 0.18s ease;
     }
 
-    var cards = sets.map(function(s) {
-      var total = s.cards ? s.cards.length : 0;
-      var prog = s.progress || 0;
-      return '<div class="set-card" onclick="openSet(\'' + s.id + '\')">' +
-        '<div class="set-card-title">' + esc(s.title) + '</div>' +
-        '<div class="set-card-meta">' + total + ' term' + (total !== 1 ? 's' : '') + (s.source ? ' &middot; Imported' : '') + '</div>' +
-        '<div class="set-card-progress"><div class="set-card-progress-bar" style="width:' + prog + '%"></div></div>' +
-        '<div class="set-card-actions">' +
-        '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();beginMode(\'' + s.id + '\',\'fc\')">Cards</button>' +
-        '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();beginMode(\'' + s.id + '\',\'learn\')">Learn</button>' +
-        '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showEditModal(\'' + s.id + '\')">Edit</button>' +
-        '<button class="btn btn-ghost btn-sm" style="margin-left:auto;color:var(--text3)" onclick="event.stopPropagation();deleteSet(\'' + s.id + '\')">&#10005;</button>' +
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .topbar-right {
+      margin-left: auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    .main {
+      flex: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 32px 24px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all var(--t);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(45, 91, 227, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text2);
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .btn-sm {
+      padding: 6px 13px;
+      font-size: 13px;
+    }
+
+    .btn-lg {
+      padding: 13px 28px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Home */
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .home-header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      font-weight: 400;
+    }
+
+    .sets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .set-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      cursor: pointer;
+      transition: all var(--t);
+      box-shadow: var(--shadow);
+    }
+
+    .set-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+      border-color: #c8c3bc;
+    }
+
+    .set-card-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+
+    .set-card-meta {
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 14px;
+    }
+
+    .set-card-progress {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      margin-bottom: 14px;
+    }
+
+    .set-card-progress-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .set-card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+      color: var(--text2);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      color: var(--text);
+      margin-bottom: 8px;
+      font-weight: 400;
+    }
+
+    .empty-state p {
+      margin-bottom: 24px;
+    }
+
+    /* Modal */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 18, 14, 0.45);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.15s ease;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 560px;
+      max-height: 88vh;
+      overflow-y: auto;
+      animation: slideUp 0.2s ease;
+    }
+
+    .modal-hd {
+      padding: 24px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-hd h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      font-weight: 400;
+    }
+
+    .modal-bd {
+      padding: 20px 24px 24px;
+    }
+
+    .modal-ft {
+      padding: 0 24px 24px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* Forms */
+    .fg {
+      margin-bottom: 16px;
+    }
+
+    .fl {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .fi {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color var(--t);
+    }
+
+    .fi:focus {
+      border-color: var(--accent);
+    }
+
+    textarea.fi {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .term-num {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin: 10px 0 8px;
+    }
+
+    .term-num.first {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
+
+    .term-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+    }
+
+    .rm-btn {
+      padding: 10px 8px;
+      color: var(--text3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 18px;
+      transition: all var(--t);
+      align-self: start;
+      margin-top: 2px;
+    }
+
+    .rm-btn:hover {
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+
+    /* Set detail */
+    .set-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 30px;
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .set-desc {
+      color: var(--text2);
+      font-size: 14px;
+    }
+
+    .set-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .stat-num {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat-lbl {
+      font-size: 12px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .study-modes {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .mode-card {
+      flex: 1;
+      padding: 20px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--t);
+    }
+
+    .mode-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+      transform: translateY(-1px);
+    }
+
+    .mode-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .mode-name {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 3px;
+    }
+
+    .mode-desc {
+      font-size: 12px;
+      color: var(--text2);
+    }
+
+    .terms-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .term-item {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .term-side {
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .term-side.front {
+      border-right: 1px solid var(--border);
+      font-weight: 500;
+    }
+
+    .term-side.back {
+      color: var(--text2);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text2);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all var(--t);
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    /* Flashcards */
+    .fc-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .pbar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+    }
+
+    .pbar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .flashcard {
+      width: 100%;
+      max-width: 640px;
+      height: 340px;
+      perspective: 1200px;
+      cursor: pointer;
+    }
+
+    .fc-inner {
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .flashcard.flipped .fc-inner {
+      transform: rotateY(180deg);
+    }
+
+    .fc-face {
+      position: absolute;
+      inset: 0;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      text-align: center;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .fc-face.back {
+      transform: rotateY(180deg);
+      background: var(--accent-light);
+      border-color: #c5d1f7;
+    }
+
+    .fc-lbl {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 16px;
+    }
+
+    .fc-text {
+      font-size: 22px;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+
+    .fc-hint {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 16px;
+    }
+
+    .fc-nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Learn */
+    .learn-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .learn-q-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .learn-ql {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+
+    .learn-q {
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .learn-opts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .learn-opt {
+      padding: 16px 20px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+      transition: all var(--t);
+      line-height: 1.4;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+    }
+
+    .learn-opt:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .learn-opt.correct {
+      background: var(--green-light) !important;
+      border-color: var(--green) !important;
+      color: var(--green) !important;
+    }
+
+    .learn-opt.wrong {
+      background: var(--red-light) !important;
+      border-color: var(--red) !important;
+      color: var(--red) !important;
+    }
+
+    .learn-opt:disabled {
+      cursor: default;
+    }
+
+    .learn-fb {
+      text-align: center;
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      margin-bottom: 16px;
+      font-size: 15px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .learn-fb.correct {
+      background: var(--green-light);
+      color: var(--green);
+    }
+
+    .learn-fb.wrong {
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .sb-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .dot.g {
+      background: var(--green);
+    }
+
+    .dot.r {
+      background: var(--red);
+    }
+
+    /* Summary */
+    .summary {
+      text-align: center;
+      padding: 60px 40px;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    .summary h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      font-weight: 400;
+      margin-bottom: 8px;
+    }
+
+    .summary-score {
+      font-size: 64px;
+      font-weight: 300;
+      color: var(--accent);
+      margin: 24px 0 8px;
+      line-height: 1;
+    }
+
+    .summary-stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 32px;
+    }
+
+    .sv {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .sv.g {
+      color: var(--green);
+    }
+
+    .sv.r {
+      color: var(--red);
+    }
+
+    /* Import */
+    .url-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .url-row .fi {
+      flex: 1;
+    }
+
+    .imp-status {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+    }
+
+    .imp-status.loading {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .imp-status.error {
+      background: var(--red-light);
+      color: var(--red);
+    }
+
+    .imp-status.success {
+      background: var(--green-light);
+      color: var(--green);
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--t);
+      color: var(--text2);
+      font-size: 14px;
+      display: block;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .drop-zone input[type=file] {
+      display: none;
+    }
+
+    /* Back btn */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text2);
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+      transition: color var(--t);
+    }
+
+    .back-btn:hover {
+      color: var(--text);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .page {
+      animation: fadeIn 0.2s ease;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div class="logo" onclick="goHome()">Recall<span>.</span></div>
+      <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" onclick="showImportModal()">&#8595; Import</button>
+        <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ New Set</button>
+      </div>
+    </div>
+    <div class="main" id="root"></div>
+  </div>
+
+  <!-- Modal shell -->
+  <div id="overlay" style="display:none" class="overlay" onclick="overlayClick(event)">
+    <div class="modal">
+      <div class="modal-hd">
+        <h2 id="modal-title"></h2>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">&#10005;</button>
+      </div>
+      <div class="modal-bd" id="modal-body"></div>
+      <div class="modal-ft" id="modal-foot"></div>
+    </div>
+  </div>
+
+  <script>
+    // ───────────────────────────────────────────────
+    // State
+    // ───────────────────────────────────────────────
+    var S = {
+      page: 'home',
+      sets: [],
+      currentSet: null,
+      editingSet: null,
+      editCards: [],
+      fc: { index: 0, flipped: false, deck: [] },
+      lrn: { queue: [], idx: 0, answered: false, selected: null, correct: [], wrong: [], opts: [], all: [] }
+    };
+
+    // ───────────────────────────────────────────────
+    // API helpers
+    // ───────────────────────────────────────────────
+    function apiFetch(method, path, body) {
+      return fetch(path, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      }).then(function (r) { return r.json(); });
+    }
+
+    // ───────────────────────────────────────────────
+    // Routing
+    // ───────────────────────────────────────────────
+    function goHome() { S.page = 'home'; render(); }
+
+    function render() {
+      if (S.page === 'home') renderHome();
+      else if (S.page === 'set') renderSet();
+      else if (S.page === 'fc') renderFC();
+      else if (S.page === 'learn') renderLearn();
+      else if (S.page === 'done') renderDone();
+    }
+
+    // ───────────────────────────────────────────────
+    // HOME
+    // ───────────────────────────────────────────────
+    function renderHome() {
+      apiFetch('GET', '/api/sets').then(function (sets) {
+        S.sets = sets;
+        var el = document.getElementById('root');
+
+        if (!sets.length) {
+          el.innerHTML =
+            '<div class="page">' +
+            '<div class="home-header"><h1>Your Sets</h1></div>' +
+            '<div class="empty-state">' +
+            '<div class="icon">&#128218;</div>' +
+            '<h2>No sets yet</h2>' +
+            '<p>Create your first flashcard set or import one from Quizlet.</p>' +
+            '<div style="display:flex;gap:12px;justify-content:center">' +
+            '<button class="btn btn-primary btn-lg" onclick="showCreateModal()">+ Create Set</button>' +
+            '<button class="btn btn-secondary btn-lg" onclick="showImportModal()">&#8595; Import from Quizlet</button>' +
+            '</div></div></div>';
+          return;
+        }
+
+        var cards = sets.map(function (s) {
+          var total = s.cards ? s.cards.length : 0;
+          var prog = s.progress || 0;
+          return '<div class="set-card" onclick="openSet(\'' + s.id + '\')">' +
+            '<div class="set-card-title">' + esc(s.title) + '</div>' +
+            '<div class="set-card-meta">' + total + ' term' + (total !== 1 ? 's' : '') + (s.source ? ' &middot; Imported' : '') + '</div>' +
+            '<div class="set-card-progress"><div class="set-card-progress-bar" style="width:' + prog + '%"></div></div>' +
+            '<div class="set-card-actions">' +
+            '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();beginMode(\'' + s.id + '\',\'fc\')">Cards</button>' +
+            '<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();beginMode(\'' + s.id + '\',\'learn\')">Learn</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showEditModal(\'' + s.id + '\')">Edit</button>' +
+            '<button class="btn btn-ghost btn-sm" style="margin-left:auto;color:var(--text3)" onclick="event.stopPropagation();deleteSet(\'' + s.id + '\')">&#10005;</button>' +
+            '</div></div>';
+        }).join('');
+
+        el.innerHTML =
+          '<div class="page">' +
+          '<div class="home-header"><h1>Your Sets</h1>' +
+          '<div style="display:flex;gap:10px">' +
+          '<button class="btn btn-secondary" onclick="showImportModal()">&#8595; Import</button>' +
+          '<button class="btn btn-primary" onclick="showCreateModal()">+ New Set</button>' +
+          '</div></div>' +
+          '<div class="sets-grid">' + cards + '</div>' +
+          '</div>';
+      });
+    }
+
+    // ───────────────────────────────────────────────
+    // SET DETAIL
+    // ───────────────────────────────────────────────
+    function openSet(id) {
+      var s = S.sets.find(function (x) { return x.id === id; });
+      if (!s) return;
+      apiFetch('GET', '/api/progress/' + id).then(function (prog) {
+        S.currentSet = Object.assign({}, s, { prog: prog || {} });
+        S.page = 'set';
+        renderSet();
+      });
+    }
+
+    function renderSet() {
+      var s = S.currentSet;
+      if (!s) return;
+      var cards = s.cards || [];
+      var mastered = Object.values(s.prog || {}).filter(function (v) { return v === 'mastered'; }).length;
+
+      var terms = cards.map(function (c) {
+        return '<div class="term-item">' +
+          '<div class="term-side front">' + esc(c.front) + '</div>' +
+          '<div class="term-side back">' + esc(c.back) + '</div>' +
+          '</div>';
+      }).join('');
+
+      document.getElementById('root').innerHTML =
+        '<div class="page">' +
+        '<button class="back-btn" onclick="goHome()">&#8592; Back to sets</button>' +
+        '<div style="margin-bottom:28px">' +
+        '<div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px">' +
+        '<div style="flex:1"><h1 class="set-title">' + esc(s.title) + '</h1>' +
+        (s.description ? '<div class="set-desc">' + esc(s.description) + '</div>' : '') +
+        '</div>' +
+        '<button class="btn btn-secondary btn-sm" onclick="showEditModal(\'' + s.id + '\')">Edit</button>' +
+        '</div>' +
+        '<div class="set-stats">' +
+        '<div><div class="stat-num">' + cards.length + '</div><div class="stat-lbl">Terms</div></div>' +
+        '<div><div class="stat-num" style="color:var(--green)">' + mastered + '</div><div class="stat-lbl">Mastered</div></div>' +
+        '<div><div class="stat-num">' + (cards.length - mastered) + '</div><div class="stat-lbl">Remaining</div></div>' +
+        '</div></div>' +
+        '<div class="study-modes">' +
+        '<div class="mode-card" onclick="beginMode(\'' + s.id + '\',\'fc\')">' +
+        '<div class="mode-icon">&#127183;</div><div class="mode-name">Flashcards</div><div class="mode-desc">Flip through cards</div></div>' +
+        '<div class="mode-card" onclick="beginMode(\'' + s.id + '\',\'learn\')">' +
+        '<div class="mode-icon">&#129504;</div><div class="mode-name">Learn</div><div class="mode-desc">Multiple choice quiz</div></div>' +
+        '</div>' +
+        '<div class="tabs"><div class="tab active">Terms (' + cards.length + ')</div></div>' +
+        '<div class="terms-list">' + terms + '</div>' +
+        '</div>';
+    }
+
+    // ───────────────────────────────────────────────
+    // BEGIN STUDY MODE
+    // ───────────────────────────────────────────────
+    function beginMode(setId, mode) {
+      var s = S.sets.find(function (x) { return x.id === setId; }) ||
+        (S.currentSet && S.currentSet.id === setId ? S.currentSet : null);
+      if (!s) return;
+      apiFetch('GET', '/api/progress/' + setId).then(function (prog) {
+        S.currentSet = Object.assign({}, s, { prog: prog || {} });
+        if (mode === 'fc') {
+          S.fc = { index: 0, flipped: false, deck: shuffle(s.cards.slice()) };
+          S.page = 'fc';
+          renderFC();
+        } else {
+          initLearn(s.cards, prog || {});
+          S.page = 'learn';
+          renderLearn();
+        }
+      });
+    }
+
+    // ───────────────────────────────────────────────
+    // FLASHCARDS
+    // ───────────────────────────────────────────────
+    function renderFC() {
+      var fc = S.fc;
+      var card = fc.deck[fc.index];
+      var pct = Math.round((fc.index / fc.deck.length) * 100);
+      var prevDis = fc.index === 0 ? ' disabled' : '';
+      var nextDis = fc.index >= fc.deck.length - 1 ? ' disabled' : '';
+
+      document.getElementById('root').innerHTML =
+        '<div class="page">' +
+        '<button class="back-btn" onclick="S.page=\'set\';renderSet()">&#8592; ' + esc(S.currentSet.title) + '</button>' +
+        '<div class="fc-wrap">' +
+        '<div style="width:100%;max-width:640px;display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:14px;color:var(--text2)">' + (fc.index + 1) + ' / ' + fc.deck.length + '</span>' +
+        '<button class="btn btn-ghost btn-sm" onclick="shuffleFC()">&#128256; Shuffle</button>' +
+        '</div>' +
+        '<div style="width:100%;max-width:640px"><div class="pbar-wrap"><div class="pbar-fill" style="width:' + pct + '%"></div></div></div>' +
+        '<div class="flashcard' + (fc.flipped ? ' flipped' : '') + '" id="fc-card" onclick="flipFC()">' +
+        '<div class="fc-inner">' +
+        '<div class="fc-face front">' +
+        '<div class="fc-lbl">Term</div>' +
+        '<div class="fc-text">' + esc(card.front) + '</div>' +
+        '<div class="fc-hint">Click to reveal</div>' +
+        '</div>' +
+        '<div class="fc-face back">' +
+        '<div class="fc-lbl">Definition</div>' +
+        '<div class="fc-text">' + esc(card.back) + '</div>' +
+        '</div>' +
+        '</div></div>' +
+        '<div class="fc-nav">' +
+        '<button class="btn btn-secondary"' + prevDis + ' onclick="fcPrev()">&#8592; Prev</button>' +
+        '<div style="display:flex;gap:12px">' +
+        '<button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="fcMark(\'wrong\')">&#10007; Again</button>' +
+        '<button class="btn btn-sm" style="background:var(--green-light);color:var(--green)" onclick="fcMark(\'mastered\')">&#10003; Got it</button>' +
+        '</div>' +
+        '<button class="btn btn-secondary"' + nextDis + ' onclick="fcNext()">Next &#8594;</button>' +
+        '</div>' +
         '</div></div>';
-    }).join('');
 
-    el.innerHTML =
-      '<div class="page">' +
-      '<div class="home-header"><h1>Your Sets</h1>' +
-      '<div style="display:flex;gap:10px">' +
-      '<button class="btn btn-secondary" onclick="showImportModal()">&#8595; Import</button>' +
-      '<button class="btn btn-primary" onclick="showCreateModal()">+ New Set</button>' +
-      '</div></div>' +
-      '<div class="sets-grid">' + cards + '</div>' +
-      '</div>';
-  });
-}
+      document.onkeydown = function (e) {
+        if (S.page !== 'fc') { document.onkeydown = null; return; }
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); fcNext(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); fcPrev(); }
+        else if (e.key === 'ArrowUp' || e.key === 'f') flipFC();
+      };
+    }
 
-// ───────────────────────────────────────────────
-// SET DETAIL
-// ───────────────────────────────────────────────
-function openSet(id) {
-  var s = S.sets.find(function(x) { return x.id === id; });
-  if (!s) return;
-  apiFetch('GET', '/api/progress/' + id).then(function(prog) {
-    S.currentSet = Object.assign({}, s, { prog: prog || {} });
-    S.page = 'set';
-    renderSet();
-  });
-}
+    function flipFC() {
+      S.fc.flipped = !S.fc.flipped;
+      var el = document.getElementById('fc-card');
+      if (el) el.classList.toggle('flipped', S.fc.flipped);
+    }
+    function fcNext() { if (S.fc.index < S.fc.deck.length - 1) { S.fc.index++; S.fc.flipped = false; renderFC(); } }
+    function fcPrev() { if (S.fc.index > 0) { S.fc.index--; S.fc.flipped = false; renderFC(); } }
+    function shuffleFC() { S.fc.deck = shuffle(S.currentSet.cards.slice()); S.fc.index = 0; S.fc.flipped = false; renderFC(); }
+    function fcMark(status) {
+      var card = S.fc.deck[S.fc.index];
+      S.currentSet.prog[card.id] = status;
+      apiFetch('POST', '/api/progress/' + S.currentSet.id, S.currentSet.prog);
+      if (S.fc.index < S.fc.deck.length - 1) { S.fc.index++; S.fc.flipped = false; renderFC(); }
+    }
 
-function renderSet() {
-  var s = S.currentSet;
-  if (!s) return;
-  var cards = s.cards || [];
-  var mastered = Object.values(s.prog || {}).filter(function(v) { return v === 'mastered'; }).length;
+    // ───────────────────────────────────────────────
+    // LEARN
+    // Shows the TERM, player chooses the correct DEFINITION
+    // ───────────────────────────────────────────────
+    function initLearn(cards, prog) {
+      var queue = cards.filter(function (c) { return prog[c.id] !== 'mastered'; });
+      if (!queue.length) queue = cards.slice();
+      S.lrn = {
+        queue: shuffle(queue.slice()),
+        idx: 0,
+        answered: false,
+        selected: null,
+        correct: [],
+        wrong: [],
+        opts: [],
+        all: cards
+      };
+      buildOpts();
+    }
 
-  var terms = cards.map(function(c) {
-    return '<div class="term-item">' +
-      '<div class="term-side front">' + esc(c.front) + '</div>' +
-      '<div class="term-side back">' + esc(c.back) + '</div>' +
-      '</div>';
-  }).join('');
+    function buildOpts() {
+      var lrn = S.lrn;
+      var card = lrn.queue[lrn.idx];
+      if (!card) return;
+      // Distractors: pick 3 other cards, use their DEFINITIONS as wrong options
+      var others = shuffle(lrn.all.filter(function (c) { return c.id !== card.id; })).slice(0, 3);
+      lrn.opts = shuffle([card].concat(others));
+    }
 
-  document.getElementById('root').innerHTML =
-    '<div class="page">' +
-    '<button class="back-btn" onclick="goHome()">&#8592; Back to sets</button>' +
-    '<div style="margin-bottom:28px">' +
-    '<div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px">' +
-    '<div style="flex:1"><h1 class="set-title">' + esc(s.title) + '</h1>' +
-    (s.description ? '<div class="set-desc">' + esc(s.description) + '</div>' : '') +
-    '</div>' +
-    '<button class="btn btn-secondary btn-sm" onclick="showEditModal(\'' + s.id + '\')">Edit</button>' +
-    '</div>' +
-    '<div class="set-stats">' +
-    '<div><div class="stat-num">' + cards.length + '</div><div class="stat-lbl">Terms</div></div>' +
-    '<div><div class="stat-num" style="color:var(--green)">' + mastered + '</div><div class="stat-lbl">Mastered</div></div>' +
-    '<div><div class="stat-num">' + (cards.length - mastered) + '</div><div class="stat-lbl">Remaining</div></div>' +
-    '</div></div>' +
-    '<div class="study-modes">' +
-    '<div class="mode-card" onclick="beginMode(\'' + s.id + '\',\'fc\')">' +
-    '<div class="mode-icon">&#127183;</div><div class="mode-name">Flashcards</div><div class="mode-desc">Flip through cards</div></div>' +
-    '<div class="mode-card" onclick="beginMode(\'' + s.id + '\',\'learn\')">' +
-    '<div class="mode-icon">&#129504;</div><div class="mode-name">Learn</div><div class="mode-desc">Multiple choice quiz</div></div>' +
-    '</div>' +
-    '<div class="tabs"><div class="tab active">Terms (' + cards.length + ')</div></div>' +
-    '<div class="terms-list">' + terms + '</div>' +
-    '</div>';
-}
+    function renderLearn() {
+      var lrn = S.lrn;
+      if (lrn.idx >= lrn.queue.length) { S.page = 'done'; renderDone(); return; }
 
-// ───────────────────────────────────────────────
-// BEGIN STUDY MODE
-// ───────────────────────────────────────────────
-function beginMode(setId, mode) {
-  var s = S.sets.find(function(x) { return x.id === setId; }) ||
-          (S.currentSet && S.currentSet.id === setId ? S.currentSet : null);
-  if (!s) return;
-  apiFetch('GET', '/api/progress/' + setId).then(function(prog) {
-    S.currentSet = Object.assign({}, s, { prog: prog || {} });
-    if (mode === 'fc') {
-      S.fc = { index: 0, flipped: false, deck: shuffle(s.cards.slice()) };
-      S.page = 'fc';
-      renderFC();
-    } else {
-      initLearn(s.cards, prog || {});
+      var card = lrn.queue[lrn.idx];
+      var pct = Math.round((lrn.idx / lrn.queue.length) * 100);
+
+      // Each option shows a DEFINITION; correct answer is the definition of the shown TERM
+      var opts = lrn.opts.map(function (opt) {
+        var cls = 'learn-opt';
+        if (lrn.answered) {
+          if (opt.id === card.id) cls += ' correct';
+          else if (opt.id === lrn.selected) cls += ' wrong';
+        }
+        return '<button class="' + cls + '" onclick="answerLearn(\'' + opt.id + '\')"' +
+          (lrn.answered ? ' disabled' : '') + '>' + esc(opt.back) + '</button>';
+      }).join('');
+
+      var fb = '';
+      if (lrn.answered) {
+        var ok = lrn.selected === card.id;
+        fb = '<div class="learn-fb ' + (ok ? 'correct' : 'wrong') + '">' +
+          (ok ? '&#10003; Correct!' : '&#10007; Answer: ' + esc(card.back)) + '</div>';
+      }
+
+      document.getElementById('root').innerHTML =
+        '<div class="page">' +
+        '<button class="back-btn" onclick="S.page=\'set\';renderSet()">&#8592; ' + esc(S.currentSet.title) + '</button>' +
+        '<div class="learn-wrap">' +
+        '<div class="stats-bar">' +
+        '<div class="sb-item"><div class="dot g"></div> ' + lrn.correct.length + ' correct</div>' +
+        '<div class="sb-item"><div class="dot r"></div> ' + lrn.wrong.length + ' incorrect</div>' +
+        '<div class="sb-item" style="color:var(--text2)">' + (lrn.idx + 1) + ' / ' + lrn.queue.length + '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:16px"><div class="pbar-wrap"><div class="pbar-fill" style="width:' + pct + '%"></div></div></div>' +
+        // Question card: show the TERM, player picks matching DEFINITION
+        '<div class="learn-q-card">' +
+        '<div class="learn-ql">Term</div>' +
+        '<div class="learn-q">' + esc(card.front) + '</div>' +
+        '</div>' +
+        '<div class="learn-ql" style="margin-bottom:10px">Choose the definition</div>' +
+        '<div class="learn-opts">' + opts + '</div>' +
+        fb +
+        (lrn.answered ? '<div style="text-align:center"><button class="btn btn-primary" onclick="nextLearn()">Continue &#8594;</button></div>' : '') +
+        '</div></div>';
+    }
+
+    function answerLearn(optId) {
+      var lrn = S.lrn;
+      var card = lrn.queue[lrn.idx];
+      lrn.selected = optId;
+      lrn.answered = true;
+      var ok = optId === card.id;
+      if (ok) { lrn.correct.push(card); S.currentSet.prog[card.id] = 'mastered'; }
+      else { lrn.wrong.push(card); S.currentSet.prog[card.id] = 'learning'; }
+      apiFetch('POST', '/api/progress/' + S.currentSet.id, S.currentSet.prog);
+
+      // Update progress bar on set card
+      var mastered = Object.values(S.currentSet.prog).filter(function (v) { return v === 'mastered'; }).length;
+      var pct = Math.round((mastered / lrn.all.length) * 100);
+      var si = S.sets.findIndex(function (s) { return s.id === S.currentSet.id; });
+      if (si !== -1) S.sets[si].progress = pct;
+
+      renderLearn();
+    }
+
+    function nextLearn() {
+      S.lrn.idx++;
+      S.lrn.answered = false;
+      S.lrn.selected = null;
+      buildOpts();
+      renderLearn();
+    }
+
+    // ───────────────────────────────────────────────
+    // DONE / SUMMARY
+    // ───────────────────────────────────────────────
+    function renderDone() {
+      var lrn = S.lrn;
+      var total = lrn.queue.length;
+      var score = Math.round((lrn.correct.length / total) * 100);
+      var em = score >= 80 ? '&#127881;' : score >= 60 ? '&#128218;' : '&#128170;';
+
+      document.getElementById('root').innerHTML =
+        '<div class="page"><div class="summary">' +
+        '<div style="font-size:48px;margin-bottom:8px">' + em + '</div>' +
+        '<h2>Round Complete!</h2>' +
+        '<div class="summary-score">' + score + '%</div>' +
+        '<div style="color:var(--text2);margin-bottom:32px">accuracy this round</div>' +
+        '<div class="summary-stats">' +
+        '<div><div class="sv g">' + lrn.correct.length + '</div><div style="font-size:13px;color:var(--text2)">Correct</div></div>' +
+        '<div><div class="sv r">' + lrn.wrong.length + '</div><div style="font-size:13px;color:var(--text2)">Incorrect</div></div>' +
+        '<div><div class="sv">' + total + '</div><div style="font-size:13px;color:var(--text2)">Total</div></div>' +
+        '</div>' +
+        '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
+        (lrn.wrong.length > 0 ? '<button class="btn btn-primary btn-lg" onclick="retryWrong()">Retry missed (' + lrn.wrong.length + ')</button>' : '') +
+        '<button class="btn btn-secondary btn-lg" onclick="beginMode(\'' + S.currentSet.id + '\',\'learn\')">New Round</button>' +
+        '<button class="btn btn-ghost btn-lg" onclick="S.page=\'set\';renderSet()">Back to Set</button>' +
+        '</div></div></div>';
+    }
+
+    function retryWrong() {
+      var all = S.lrn.all;
+      var wrong = S.lrn.wrong.slice();
+      S.lrn = { queue: shuffle(wrong), idx: 0, answered: false, selected: null, correct: [], wrong: [], opts: [], all: all };
+      buildOpts();
       S.page = 'learn';
       renderLearn();
     }
-  });
-}
 
-// ───────────────────────────────────────────────
-// FLASHCARDS
-// ───────────────────────────────────────────────
-function renderFC() {
-  var fc = S.fc;
-  var card = fc.deck[fc.index];
-  var pct = Math.round((fc.index / fc.deck.length) * 100);
-  var prevDis = fc.index === 0 ? ' disabled' : '';
-  var nextDis = fc.index >= fc.deck.length - 1 ? ' disabled' : '';
-
-  document.getElementById('root').innerHTML =
-    '<div class="page">' +
-    '<button class="back-btn" onclick="S.page=\'set\';renderSet()">&#8592; ' + esc(S.currentSet.title) + '</button>' +
-    '<div class="fc-wrap">' +
-    '<div style="width:100%;max-width:640px;display:flex;justify-content:space-between;align-items:center">' +
-    '<span style="font-size:14px;color:var(--text2)">' + (fc.index + 1) + ' / ' + fc.deck.length + '</span>' +
-    '<button class="btn btn-ghost btn-sm" onclick="shuffleFC()">&#128256; Shuffle</button>' +
-    '</div>' +
-    '<div style="width:100%;max-width:640px"><div class="pbar-wrap"><div class="pbar-fill" style="width:' + pct + '%"></div></div></div>' +
-    '<div class="flashcard' + (fc.flipped ? ' flipped' : '') + '" id="fc-card" onclick="flipFC()">' +
-    '<div class="fc-inner">' +
-    '<div class="fc-face front">' +
-    '<div class="fc-lbl">Term</div>' +
-    '<div class="fc-text">' + esc(card.front) + '</div>' +
-    '<div class="fc-hint">Click to reveal</div>' +
-    '</div>' +
-    '<div class="fc-face back">' +
-    '<div class="fc-lbl">Definition</div>' +
-    '<div class="fc-text">' + esc(card.back) + '</div>' +
-    '</div>' +
-    '</div></div>' +
-    '<div class="fc-nav">' +
-    '<button class="btn btn-secondary"' + prevDis + ' onclick="fcPrev()">&#8592; Prev</button>' +
-    '<div style="display:flex;gap:12px">' +
-    '<button class="btn btn-sm" style="background:var(--red-light);color:var(--red)" onclick="fcMark(\'wrong\')">&#10007; Again</button>' +
-    '<button class="btn btn-sm" style="background:var(--green-light);color:var(--green)" onclick="fcMark(\'mastered\')">&#10003; Got it</button>' +
-    '</div>' +
-    '<button class="btn btn-secondary"' + nextDis + ' onclick="fcNext()">Next &#8594;</button>' +
-    '</div>' +
-    '</div></div>';
-
-  document.onkeydown = function(e) {
-    if (S.page !== 'fc') { document.onkeydown = null; return; }
-    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); fcNext(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); fcPrev(); }
-    else if (e.key === 'ArrowUp' || e.key === 'f') flipFC();
-  };
-}
-
-function flipFC() {
-  S.fc.flipped = !S.fc.flipped;
-  var el = document.getElementById('fc-card');
-  if (el) el.classList.toggle('flipped', S.fc.flipped);
-}
-function fcNext() { if (S.fc.index < S.fc.deck.length - 1) { S.fc.index++; S.fc.flipped = false; renderFC(); } }
-function fcPrev() { if (S.fc.index > 0) { S.fc.index--; S.fc.flipped = false; renderFC(); } }
-function shuffleFC() { S.fc.deck = shuffle(S.currentSet.cards.slice()); S.fc.index = 0; S.fc.flipped = false; renderFC(); }
-function fcMark(status) {
-  var card = S.fc.deck[S.fc.index];
-  S.currentSet.prog[card.id] = status;
-  apiFetch('POST', '/api/progress/' + S.currentSet.id, S.currentSet.prog);
-  if (S.fc.index < S.fc.deck.length - 1) { S.fc.index++; S.fc.flipped = false; renderFC(); }
-}
-
-// ───────────────────────────────────────────────
-// LEARN
-// Shows the TERM, player chooses the correct DEFINITION
-// ───────────────────────────────────────────────
-function initLearn(cards, prog) {
-  var queue = cards.filter(function(c) { return prog[c.id] !== 'mastered'; });
-  if (!queue.length) queue = cards.slice();
-  S.lrn = {
-    queue: shuffle(queue.slice()),
-    idx: 0,
-    answered: false,
-    selected: null,
-    correct: [],
-    wrong: [],
-    opts: [],
-    all: cards
-  };
-  buildOpts();
-}
-
-function buildOpts() {
-  var lrn = S.lrn;
-  var card = lrn.queue[lrn.idx];
-  if (!card) return;
-  // Distractors: pick 3 other cards, use their DEFINITIONS as wrong options
-  var others = shuffle(lrn.all.filter(function(c) { return c.id !== card.id; })).slice(0, 3);
-  lrn.opts = shuffle([card].concat(others));
-}
-
-function renderLearn() {
-  var lrn = S.lrn;
-  if (lrn.idx >= lrn.queue.length) { S.page = 'done'; renderDone(); return; }
-
-  var card = lrn.queue[lrn.idx];
-  var pct = Math.round((lrn.idx / lrn.queue.length) * 100);
-
-  // Each option shows a DEFINITION; correct answer is the definition of the shown TERM
-  var opts = lrn.opts.map(function(opt) {
-    var cls = 'learn-opt';
-    if (lrn.answered) {
-      if (opt.id === card.id) cls += ' correct';
-      else if (opt.id === lrn.selected) cls += ' wrong';
+    // ───────────────────────────────────────────────
+    // CREATE / EDIT SET
+    // ───────────────────────────────────────────────
+    function showCreateModal() {
+      S.editingSet = null;
+      S.editCards = [{ id: 'c0', front: '', back: '' }, { id: 'c1', front: '', back: '' }];
+      openModal('Create New Set',
+        buildEditorHTML(),
+        '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>' +
+        '<button class="btn btn-primary" onclick="saveSet()">Create Set</button>'
+      );
     }
-    return '<button class="' + cls + '" onclick="answerLearn(\'' + opt.id + '\')"' +
-      (lrn.answered ? ' disabled' : '') + '>' + esc(opt.back) + '</button>';
-  }).join('');
 
-  var fb = '';
-  if (lrn.answered) {
-    var ok = lrn.selected === card.id;
-    fb = '<div class="learn-fb ' + (ok ? 'correct' : 'wrong') + '">' +
-      (ok ? '&#10003; Correct!' : '&#10007; Answer: ' + esc(card.back)) + '</div>';
-  }
-
-  document.getElementById('root').innerHTML =
-    '<div class="page">' +
-    '<button class="back-btn" onclick="S.page=\'set\';renderSet()">&#8592; ' + esc(S.currentSet.title) + '</button>' +
-    '<div class="learn-wrap">' +
-    '<div class="stats-bar">' +
-    '<div class="sb-item"><div class="dot g"></div> ' + lrn.correct.length + ' correct</div>' +
-    '<div class="sb-item"><div class="dot r"></div> ' + lrn.wrong.length + ' incorrect</div>' +
-    '<div class="sb-item" style="color:var(--text2)">' + (lrn.idx + 1) + ' / ' + lrn.queue.length + '</div>' +
-    '</div>' +
-    '<div style="margin-bottom:16px"><div class="pbar-wrap"><div class="pbar-fill" style="width:' + pct + '%"></div></div></div>' +
-    // Question card: show the TERM, player picks matching DEFINITION
-    '<div class="learn-q-card">' +
-    '<div class="learn-ql">Term</div>' +
-    '<div class="learn-q">' + esc(card.front) + '</div>' +
-    '</div>' +
-    '<div class="learn-ql" style="margin-bottom:10px">Choose the definition</div>' +
-    '<div class="learn-opts">' + opts + '</div>' +
-    fb +
-    (lrn.answered ? '<div style="text-align:center"><button class="btn btn-primary" onclick="nextLearn()">Continue &#8594;</button></div>' : '') +
-    '</div></div>';
-}
-
-function answerLearn(optId) {
-  var lrn = S.lrn;
-  var card = lrn.queue[lrn.idx];
-  lrn.selected = optId;
-  lrn.answered = true;
-  var ok = optId === card.id;
-  if (ok) { lrn.correct.push(card); S.currentSet.prog[card.id] = 'mastered'; }
-  else { lrn.wrong.push(card); S.currentSet.prog[card.id] = 'learning'; }
-  apiFetch('POST', '/api/progress/' + S.currentSet.id, S.currentSet.prog);
-
-  // Update progress bar on set card
-  var mastered = Object.values(S.currentSet.prog).filter(function(v) { return v === 'mastered'; }).length;
-  var pct = Math.round((mastered / lrn.all.length) * 100);
-  var si = S.sets.findIndex(function(s) { return s.id === S.currentSet.id; });
-  if (si !== -1) S.sets[si].progress = pct;
-
-  renderLearn();
-}
-
-function nextLearn() {
-  S.lrn.idx++;
-  S.lrn.answered = false;
-  S.lrn.selected = null;
-  buildOpts();
-  renderLearn();
-}
-
-// ───────────────────────────────────────────────
-// DONE / SUMMARY
-// ───────────────────────────────────────────────
-function renderDone() {
-  var lrn = S.lrn;
-  var total = lrn.queue.length;
-  var score = Math.round((lrn.correct.length / total) * 100);
-  var em = score >= 80 ? '&#127881;' : score >= 60 ? '&#128218;' : '&#128170;';
-
-  document.getElementById('root').innerHTML =
-    '<div class="page"><div class="summary">' +
-    '<div style="font-size:48px;margin-bottom:8px">' + em + '</div>' +
-    '<h2>Round Complete!</h2>' +
-    '<div class="summary-score">' + score + '%</div>' +
-    '<div style="color:var(--text2);margin-bottom:32px">accuracy this round</div>' +
-    '<div class="summary-stats">' +
-    '<div><div class="sv g">' + lrn.correct.length + '</div><div style="font-size:13px;color:var(--text2)">Correct</div></div>' +
-    '<div><div class="sv r">' + lrn.wrong.length + '</div><div style="font-size:13px;color:var(--text2)">Incorrect</div></div>' +
-    '<div><div class="sv">' + total + '</div><div style="font-size:13px;color:var(--text2)">Total</div></div>' +
-    '</div>' +
-    '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">' +
-    (lrn.wrong.length > 0 ? '<button class="btn btn-primary btn-lg" onclick="retryWrong()">Retry missed (' + lrn.wrong.length + ')</button>' : '') +
-    '<button class="btn btn-secondary btn-lg" onclick="beginMode(\'' + S.currentSet.id + '\',\'learn\')">New Round</button>' +
-    '<button class="btn btn-ghost btn-lg" onclick="S.page=\'set\';renderSet()">Back to Set</button>' +
-    '</div></div></div>';
-}
-
-function retryWrong() {
-  var all = S.lrn.all;
-  var wrong = S.lrn.wrong.slice();
-  S.lrn = { queue: shuffle(wrong), idx: 0, answered: false, selected: null, correct: [], wrong: [], opts: [], all: all };
-  buildOpts();
-  S.page = 'learn';
-  renderLearn();
-}
-
-// ───────────────────────────────────────────────
-// CREATE / EDIT SET
-// ───────────────────────────────────────────────
-function showCreateModal() {
-  S.editingSet = null;
-  S.editCards = [{ id: 'c0', front: '', back: '' }, { id: 'c1', front: '', back: '' }];
-  openModal('Create New Set',
-    buildEditorHTML(),
-    '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>' +
-    '<button class="btn btn-primary" onclick="saveSet()">Create Set</button>'
-  );
-}
-
-function showEditModal(id) {
-  var s = S.sets.find(function(x) { return x.id === id; }) ||
-          (S.currentSet && S.currentSet.id === id ? S.currentSet : null);
-  if (!s) return;
-  S.editingSet = s;
-  S.editCards = s.cards.map(function(c) { return { id: c.id, front: c.front, back: c.back }; });
-  openModal('Edit Set',
-    buildEditorHTML(),
-    '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>' +
-    '<button class="btn btn-primary" onclick="saveSet()">Save Changes</button>'
-  );
-}
-
-function buildEditorHTML() {
-  var s = S.editingSet;
-  return '<div class="fg"><label class="fl">Title</label>' +
-    '<input class="fi" id="set-title" placeholder="e.g. Spanish Vocab Ch. 3" value="' + esc(s ? s.title : '') + '"></div>' +
-    '<div class="fg"><label class="fl">Description (optional)</label>' +
-    '<input class="fi" id="set-desc" placeholder="Brief description..." value="' + esc(s && s.description ? s.description : '') + '"></div>' +
-    '<hr class="divider">' +
-    '<div id="terms-container">' + buildTermsHTML() + '</div>' +
-    '<button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="addTerm()">+ Add Term</button>';
-}
-
-function buildTermsHTML() {
-  return S.editCards.map(function(c, i) {
-    return '<div class="term-num' + (i === 0 ? ' first' : '') + '">Term ' + (i + 1) + '</div>' +
-      '<div class="term-row">' +
-      '<textarea class="fi" placeholder="Term" rows="2" oninput="updateTerm(\'' + c.id + '\',\'front\',this.value)">' + esc(c.front) + '</textarea>' +
-      '<textarea class="fi" placeholder="Definition" rows="2" oninput="updateTerm(\'' + c.id + '\',\'back\',this.value)">' + esc(c.back) + '</textarea>' +
-      '<button class="rm-btn" onclick="removeTerm(\'' + c.id + '\')" title="Remove">&#10005;</button>' +
-      '</div>';
-  }).join('');
-}
-
-function updateTerm(id, field, val) {
-  var c = S.editCards.find(function(x) { return x.id === id; });
-  if (c) c[field] = val;
-}
-
-function addTerm() {
-  S.editCards.push({ id: 'c' + Date.now(), front: '', back: '' });
-  refreshEditor();
-}
-
-function removeTerm(id) {
-  if (S.editCards.length <= 1) return;
-  S.editCards = S.editCards.filter(function(c) { return c.id !== id; });
-  refreshEditor();
-}
-
-function refreshEditor() {
-  var t = document.getElementById('set-title').value;
-  var d = document.getElementById('set-desc').value;
-  document.getElementById('terms-container').innerHTML = buildTermsHTML();
-  document.getElementById('set-title').value = t;
-  document.getElementById('set-desc').value = d;
-}
-
-function saveSet() {
-  var title = document.getElementById('set-title').value.trim();
-  if (!title) { alert('Please enter a title.'); return; }
-  var cards = S.editCards.filter(function(c) { return c.front.trim() || c.back.trim(); });
-  if (!cards.length) { alert('Please add at least one term.'); return; }
-  var payload = { title: title, description: document.getElementById('set-desc').value.trim(), cards: cards };
-  var p = S.editingSet
-    ? apiFetch('PUT', '/api/sets/' + S.editingSet.id, payload)
-    : apiFetch('POST', '/api/sets', payload);
-  p.then(function(updated) {
-    if (S.page === 'set' && S.editingSet) {
-      S.currentSet = Object.assign({}, updated, { prog: S.currentSet.prog });
+    function showEditModal(id) {
+      var s = S.sets.find(function (x) { return x.id === id; }) ||
+        (S.currentSet && S.currentSet.id === id ? S.currentSet : null);
+      if (!s) return;
+      S.editingSet = s;
+      S.editCards = s.cards.map(function (c) { return { id: c.id, front: c.front, back: c.back }; });
+      openModal('Edit Set',
+        buildEditorHTML(),
+        '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>' +
+        '<button class="btn btn-primary" onclick="saveSet()">Save Changes</button>'
+      );
     }
-    closeModal();
-    if (S.page === 'set') renderSet(); else renderHome();
-  });
-}
 
-// ───────────────────────────────────────────────
-// IMPORT MODAL
-// ───────────────────────────────────────────────
-function showImportModal() {
-  openModal('Import from Quizlet',
-    '<div class="tabs">' +
-    '<div class="tab active" id="itab-file" onclick="switchITab(\'file\')">&#128196; From saved file</div>' +
-    '<div class="tab" id="itab-url" onclick="switchITab(\'url\')">&#128279; From URL</div>' +
-    '</div>' +
-    '<div id="ipane-file">' +
-    '<p style="color:var(--text2);font-size:14px;margin-bottom:4px">The most reliable method. In Quizlet, open your set then:</p>' +
-    '<p style="font-size:13px;background:var(--surface2);padding:10px 14px;border-radius:8px;margin-bottom:14px;color:var(--text)"><strong>File &rarr; Save Page As&hellip; &rarr; Webpage, Complete (.html)</strong></p>' +
-    '<label class="drop-zone" id="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">' +
-    '<input type="file" id="file-input" accept=".html,.htm" onchange="fileChosen(event)">' +
-    '<div id="drop-lbl"><div style="font-size:28px;margin-bottom:8px">&#128196;</div>' +
-    'Drop the saved <strong>.html</strong> file here<br>or <span style="color:var(--accent);text-decoration:underline;cursor:pointer" onclick="document.getElementById(\'file-input\').click()">click to browse</span></div>' +
-    '</label></div>' +
-    '<div id="ipane-url" style="display:none">' +
-    '<p style="color:var(--text2);font-size:14px;margin-bottom:4px">Paste a <strong>public</strong> Quizlet set URL. Private sets must use the file method above.</p>' +
-    '<div style="font-size:12px;background:var(--yellow-light);color:#7a5200;padding:8px 12px;border-radius:6px;margin-bottom:12px">&#9888; Quizlet may block URL imports. If it fails, use the file tab instead.</div>' +
-    '<div class="url-row">' +
-    '<input class="fi" id="import-url" placeholder="https://quizlet.com/123456/..." onkeydown="if(event.key===\'Enter\')doImportURL()">' +
-    '<button class="btn btn-primary" onclick="doImportURL()">Import</button>' +
-    '</div></div>' +
-    '<div id="imp-status"></div>',
-    ''
-  );
-}
+    function buildEditorHTML() {
+      var s = S.editingSet;
+      return '<div class="fg"><label class="fl">Title</label>' +
+        '<input class="fi" id="set-title" placeholder="e.g. Spanish Vocab Ch. 3" value="' + esc(s ? s.title : '') + '"></div>' +
+        '<div class="fg"><label class="fl">Description (optional)</label>' +
+        '<input class="fi" id="set-desc" placeholder="Brief description..." value="' + esc(s && s.description ? s.description : '') + '"></div>' +
+        '<hr class="divider">' +
+        '<div id="terms-container">' + buildTermsHTML() + '</div>' +
+        '<button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="addTerm()">+ Add Term</button>';
+    }
 
-function switchITab(tab) {
-  document.getElementById('ipane-url').style.display = tab === 'url' ? '' : 'none';
-  document.getElementById('ipane-file').style.display = tab === 'file' ? '' : 'none';
-  document.getElementById('itab-url').className = 'tab' + (tab === 'url' ? ' active' : '');
-  document.getElementById('itab-file').className = 'tab' + (tab === 'file' ? ' active' : '');
-  setImpStatus('', '');
-}
+    function buildTermsHTML() {
+      return S.editCards.map(function (c, i) {
+        return '<div class="term-num' + (i === 0 ? ' first' : '') + '">Term ' + (i + 1) + '</div>' +
+          '<div class="term-row">' +
+          '<textarea class="fi" placeholder="Term" rows="2" oninput="updateTerm(\'' + c.id + '\',\'front\',this.value)">' + esc(c.front) + '</textarea>' +
+          '<textarea class="fi" placeholder="Definition" rows="2" oninput="updateTerm(\'' + c.id + '\',\'back\',this.value)">' + esc(c.back) + '</textarea>' +
+          '<button class="rm-btn" onclick="removeTerm(\'' + c.id + '\')" title="Remove">&#10005;</button>' +
+          '</div>';
+      }).join('');
+    }
 
-function setImpStatus(type, msg) {
-  var el = document.getElementById('imp-status');
-  if (!el) return;
-  el.className = msg ? 'imp-status ' + type : '';
-  el.textContent = msg;
-}
+    function updateTerm(id, field, val) {
+      var c = S.editCards.find(function (x) { return x.id === id; });
+      if (c) c[field] = val;
+    }
 
-function doImportURL() {
-  var url = document.getElementById('import-url').value.trim();
-  if (!url) return;
-  setImpStatus('loading', 'Fetching set...');
-  apiFetch('POST', '/api/import', { url: url }).then(function(r) {
-    if (r.error) { setImpStatus('error', r.error); return; }
-    setImpStatus('success', 'Found "' + r.title + '" with ' + r.cards.length + ' cards. Saving...');
-    apiFetch('POST', '/api/sets', { title: r.title, description: r.description || '', cards: r.cards, source: r.source })
-      .then(function() { setTimeout(function() { closeModal(); renderHome(); }, 900); });
-  }).catch(function() { setImpStatus('error', 'Network error. Is the server running?'); });
-}
+    function addTerm() {
+      S.editCards.push({ id: 'c' + Date.now(), front: '', back: '' });
+      refreshEditor();
+    }
 
-function dzOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
-function dzLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
-function dzDrop(e) {
-  e.preventDefault();
-  document.getElementById('drop-zone').classList.remove('drag-over');
-  var f = e.dataTransfer && e.dataTransfer.files[0];
-  if (f) processFile(f);
-}
-function fileChosen(e) { var f = e.target.files[0]; if (f) processFile(f); }
+    function removeTerm(id) {
+      if (S.editCards.length <= 1) return;
+      S.editCards = S.editCards.filter(function (c) { return c.id !== id; });
+      refreshEditor();
+    }
 
-function processFile(f) {
-  if (!f.name.match(/\.html?$/i)) { setImpStatus('error', 'Please select an HTML file.'); return; }
-  var lbl = document.getElementById('drop-lbl');
-  if (lbl) lbl.textContent = 'Reading ' + f.name + '...';
-  setImpStatus('loading', 'Parsing file...');
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    apiFetch('POST', '/api/import-html', { html: e.target.result, filename: f.name }).then(function(r) {
-      if (r.error) { setImpStatus('error', r.error); return; }
-      setImpStatus('success', 'Found "' + r.title + '" with ' + r.cards.length + ' cards. Saving...');
-      apiFetch('POST', '/api/sets', { title: r.title, description: r.description || '', cards: r.cards, source: r.source })
-        .then(function() { setTimeout(function() { closeModal(); renderHome(); }, 900); });
-    }).catch(function() { setImpStatus('error', 'Server error.'); });
-  };
-  reader.readAsText(f);
-}
+    function refreshEditor() {
+      var t = document.getElementById('set-title').value;
+      var d = document.getElementById('set-desc').value;
+      document.getElementById('terms-container').innerHTML = buildTermsHTML();
+      document.getElementById('set-title').value = t;
+      document.getElementById('set-desc').value = d;
+    }
 
-// ───────────────────────────────────────────────
-// DELETE
-// ───────────────────────────────────────────────
-function deleteSet(id) {
-  if (!confirm('Delete this set? This cannot be undone.')) return;
-  apiFetch('DELETE', '/api/sets/' + id).then(function() {
-    if (S.page === 'set') goHome(); else renderHome();
-  });
-}
+    function saveSet() {
+      var title = document.getElementById('set-title').value.trim();
+      if (!title) { alert('Please enter a title.'); return; }
+      var cards = S.editCards.filter(function (c) { return c.front.trim() || c.back.trim(); });
+      if (!cards.length) { alert('Please add at least one term.'); return; }
+      var payload = { title: title, description: document.getElementById('set-desc').value.trim(), cards: cards };
+      var p = S.editingSet
+        ? apiFetch('PUT', '/api/sets/' + S.editingSet.id, payload)
+        : apiFetch('POST', '/api/sets', payload);
+      p.then(function (updated) {
+        if (S.page === 'set' && S.editingSet) {
+          S.currentSet = Object.assign({}, updated, { prog: S.currentSet.prog });
+        }
+        closeModal();
+        if (S.page === 'set') renderSet(); else renderHome();
+      });
+    }
 
-// ───────────────────────────────────────────────
-// MODAL
-// ───────────────────────────────────────────────
-function openModal(title, body, footer) {
-  document.getElementById('modal-title').textContent = title;
-  document.getElementById('modal-body').innerHTML = body;
-  document.getElementById('modal-foot').innerHTML = footer;
-  document.getElementById('overlay').style.display = 'flex';
-}
-function closeModal() { document.getElementById('overlay').style.display = 'none'; }
-function overlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+    // ───────────────────────────────────────────────
+    // IMPORT MODAL
+    // ───────────────────────────────────────────────
+    function showImportModal() {
+      openModal('Import from Quizlet',
+        '<div class="tabs">' +
+        '<div class="tab active" id="itab-file" onclick="switchITab(\'file\')">&#128196; From saved file</div>' +
+        '<div class="tab" id="itab-url" onclick="switchITab(\'url\')">&#128279; From URL</div>' +
+        '</div>' +
+        '<div id="ipane-file">' +
+        '<p style="color:var(--text2);font-size:14px;margin-bottom:4px">The most reliable method. In Quizlet, open your set then:</p>' +
+        '<p style="font-size:13px;background:var(--surface2);padding:10px 14px;border-radius:8px;margin-bottom:14px;color:var(--text)"><strong>File &rarr; Save Page As&hellip; &rarr; Webpage, Complete (.html)</strong></p>' +
+        '<label class="drop-zone" id="drop-zone" ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">' +
+        '<input type="file" id="file-input" accept=".html,.htm" onchange="fileChosen(event)">' +
+        '<div id="drop-lbl"><div style="font-size:28px;margin-bottom:8px">&#128196;</div>' +
+        'Drop the saved <strong>.html</strong> file here<br>or <span style="color:var(--accent);text-decoration:underline;cursor:pointer" onclick="document.getElementById(\'file-input\').click()">click to browse</span></div>' +
+        '</label></div>' +
+        '<div id="ipane-url" style="display:none">' +
+        '<p style="color:var(--text2);font-size:14px;margin-bottom:4px">Paste a <strong>public</strong> Quizlet set URL. Private sets must use the file method above.</p>' +
+        '<div style="font-size:12px;background:var(--yellow-light);color:#7a5200;padding:8px 12px;border-radius:6px;margin-bottom:12px">&#9888; Quizlet may block URL imports. If it fails, use the file tab instead.</div>' +
+        '<div class="url-row">' +
+        '<input class="fi" id="import-url" placeholder="https://quizlet.com/123456/..." onkeydown="if(event.key===\'Enter\')doImportURL()">' +
+        '<button class="btn btn-primary" onclick="doImportURL()">Import</button>' +
+        '</div></div>' +
+        '<div id="imp-status"></div>',
+        ''
+      );
+    }
 
-// ───────────────────────────────────────────────
-// UTILS
-// ───────────────────────────────────────────────
-function shuffle(a) {
-  for (var i = a.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var t = a[i]; a[i] = a[j]; a[j] = t;
-  }
-  return a;
-}
+    function switchITab(tab) {
+      document.getElementById('ipane-url').style.display = tab === 'url' ? '' : 'none';
+      document.getElementById('ipane-file').style.display = tab === 'file' ? '' : 'none';
+      document.getElementById('itab-url').className = 'tab' + (tab === 'url' ? ' active' : '');
+      document.getElementById('itab-file').className = 'tab' + (tab === 'file' ? ' active' : '');
+      setImpStatus('', '');
+    }
 
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
+    function setImpStatus(type, msg) {
+      var el = document.getElementById('imp-status');
+      if (!el) return;
+      el.className = msg ? 'imp-status ' + type : '';
+      el.textContent = msg;
+    }
 
-// ───────────────────────────────────────────────
-// INIT
-// ───────────────────────────────────────────────
-renderHome();
-</script>
+    function doImportURL() {
+      var url = document.getElementById('import-url').value.trim();
+      if (!url) return;
+      setImpStatus('loading', 'Fetching set...');
+      apiFetch('POST', '/api/import', { url: url }).then(function (r) {
+        if (r.error) { setImpStatus('error', r.error); return; }
+        setImpStatus('success', 'Found "' + r.title + '" with ' + r.cards.length + ' cards. Saving...');
+        apiFetch('POST', '/api/sets', { title: r.title, description: r.description || '', cards: r.cards, source: r.source })
+          .then(function () { setTimeout(function () { closeModal(); renderHome(); }, 900); });
+      }).catch(function () { setImpStatus('error', 'Network error. Is the server running?'); });
+    }
+
+    function dzOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+    function dzLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
+    function dzDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      var f = e.dataTransfer && e.dataTransfer.files[0];
+      if (f) processFile(f);
+    }
+    function fileChosen(e) { var f = e.target.files[0]; if (f) processFile(f); }
+
+    function processFile(f) {
+      if (!f.name.match(/\.html?$/i)) { setImpStatus('error', 'Please select an HTML file.'); return; }
+      var lbl = document.getElementById('drop-lbl');
+      if (lbl) lbl.textContent = 'Reading ' + f.name + '...';
+      setImpStatus('loading', 'Parsing file...');
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        apiFetch('POST', '/api/import-html', { html: e.target.result, filename: f.name }).then(function (r) {
+          if (r.error) { setImpStatus('error', r.error); return; }
+          setImpStatus('success', 'Found "' + r.title + '" with ' + r.cards.length + ' cards. Saving...');
+          apiFetch('POST', '/api/sets', { title: r.title, description: r.description || '', cards: r.cards, source: r.source })
+            .then(function () { setTimeout(function () { closeModal(); renderHome(); }, 900); });
+        }).catch(function () { setImpStatus('error', 'Server error.'); });
+      };
+      reader.readAsText(f);
+    }
+
+    // ───────────────────────────────────────────────
+    // DELETE
+    // ───────────────────────────────────────────────
+    function deleteSet(id) {
+      if (!confirm('Delete this set? This cannot be undone.')) return;
+      apiFetch('DELETE', '/api/sets/' + id).then(function () {
+        if (S.page === 'set') goHome(); else renderHome();
+      });
+    }
+
+    // ───────────────────────────────────────────────
+    // MODAL
+    // ───────────────────────────────────────────────
+    function openModal(title, body, footer) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-body').innerHTML = body;
+      document.getElementById('modal-foot').innerHTML = footer;
+      document.getElementById('overlay').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('overlay').style.display = 'none'; }
+    function overlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+    // ───────────────────────────────────────────────
+    // UTILS
+    // ───────────────────────────────────────────────
+    function shuffle(a) {
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+
+    function esc(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // ───────────────────────────────────────────────
+    // INIT
+    // ───────────────────────────────────────────────
+    renderHome();
+  </script>
 </body>
+
 </html>
