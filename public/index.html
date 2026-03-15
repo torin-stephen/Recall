@@ -1081,7 +1081,7 @@
         '<div class="fc-wrap">' +
         '<div style="width:100%;max-width:640px;display:flex;justify-content:space-between;align-items:center">' +
         '<span style="font-size:14px;color:var(--text2)">' + (fc.index + 1) + ' / ' + fc.deck.length + '</span>' +
-        '<button class="btn btn-ghost btn-sm" onclick="shuffleFC()">&#128256; Shuffle</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="shuffleFC()">Shuffle</button>' +
         '</div>' +
         '<div style="width:100%;max-width:640px"><div class="pbar-wrap"><div class="pbar-fill" style="width:' + pct + '%"></div></div></div>' +
         '<div class="flashcard' + (fc.flipped ? ' flipped' : '') + '" id="fc-card" onclick="flipFC()">' +
@@ -1364,8 +1364,8 @@
     function showImportModal() {
       openModal('Import from Quizlet',
         '<div class="tabs">' +
-        '<div class="tab active" id="itab-file" onclick="switchITab(\'file\')">&#128196; From saved file</div>' +
-        '<div class="tab" id="itab-url" onclick="switchITab(\'url\')">&#128279; From URL</div>' +
+        '<div class="tab active" id="itab-file" onclick="switchITab(\'file\')">From saved file</div>' +
+        '<div class="tab" id="itab-url" onclick="switchITab(\'url\')">From URL</div>' +
         '</div>' +
         '<div id="ipane-file">' +
         '<p style="color:var(--text2);font-size:14px;margin-bottom:4px">The most reliable method. In Quizlet, open your set then:</p>' +
