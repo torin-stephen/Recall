@@ -33,6 +33,20 @@
       --shadow: 0 2px 12px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
       --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
       --t: 0.18s ease;
+      --dark: 0;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1816;
+      --surface: #242220;
+      --surface2: #2e2b28;
+      --border: #3d3936;
+      --text: #f0ede8;
+      --text2: #a09890;
+      --text3: #6b6560;
+      --accent-light: #1a2340;
+      --shadow: 0 2px 12px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     * {
@@ -877,6 +891,106 @@
     .page {
       animation: fadeIn 0.2s ease;
     }
+
+    .tracker-grid {
+      display: flex;
+      gap: 3px;
+    }
+
+    .tracker-col {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .tracker-cell {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      cursor: default;
+      transition: transform .1s;
+    }
+
+    .tracker-cell:hover {
+      transform: scale(1.3);
+    }
+
+    .tracker-cell.l1 {
+      background: #c0d8ff;
+      border-color: #a0c0f0;
+    }
+
+    .tracker-cell.l2 {
+      background: #6aa3f5;
+      border-color: #5090e0;
+    }
+
+    .tracker-cell.l3 {
+      background: #2d5be3;
+      border-color: #1e47cc;
+    }
+
+    .tracker-cell.l4 {
+      background: #1a3595;
+      border-color: #0f257a;
+    }
+
+    [data-theme="dark"] .tracker-cell.l1 {
+      background: #1a2e4a;
+      border-color: #1e3d66;
+    }
+
+    [data-theme="dark"] .tracker-cell.l2 {
+      background: #1e4080;
+      border-color: #2050a0;
+    }
+
+    [data-theme="dark"] .tracker-cell.l3 {
+      background: #2d5be3;
+      border-color: #3d6bf0;
+    }
+
+    [data-theme="dark"] .tracker-cell.l4 {
+      background: #4d7bff;
+      border-color: #6090ff;
+    }
+
+    .tracker-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .tracker-wrap h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: var(--text2);
+    }
+
+    .tracker-legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text3);
+    }
+
+    .tracker-legend .tracker-cell {
+      width: 10px;
+      height: 10px;
+      cursor: default;
+    }
+
+    .tracker-legend .tracker-cell:hover {
+      transform: none;
+    }
   </style>
 </head>
 
@@ -885,6 +999,7 @@
     <div class="topbar">
       <div class="logo" onclick="goHome()">Recall<span>.</span></div>
       <div class="topbar-right">
+        <button class="btn btn-secondary btn-sm" id="dark-btn" onclick="toggleDark()">☾ Dark</button>
         <button class="btn btn-secondary btn-sm" onclick="showImportModal()">&#8595; Import</button>
         <button class="btn btn-primary btn-sm" onclick="showCreateModal()">+ New Set</button>
       </div>
@@ -918,6 +1033,17 @@
       lrn: { queue: [], idx: 0, answered: false, selected: null, correct: [], wrong: [], opts: [], all: [] }
     };
 
+    function toggleDark() {
+      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', isDark ? '' : 'dark');
+      document.getElementById('dark-btn').textContent = isDark ? '☾ Dark' : '☀ Light';
+      localStorage.setItem('recall-theme', isDark ? 'light' : 'dark');
+    }
+    (function () {
+      var t = localStorage.getItem('recall-theme');
+      if (t === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); }
+    })();
+
     // ───────────────────────────────────────────────
     // API helpers
     // ───────────────────────────────────────────────
@@ -945,6 +1071,111 @@
     // ───────────────────────────────────────────────
     // HOME
     // ───────────────────────────────────────────────
+
+    function renderTracker() {
+      var actKey = 'recall-activity';
+      var act = {};
+      try { act = JSON.parse(localStorage.getItem(actKey) || '{}'); } catch (e) { }
+
+      var today = new Date();
+      var weeks = 52;
+      var cells = [];
+      // Build 52 weeks of days, ending today
+      var end = new Date(today); end.setHours(0, 0, 0, 0);
+      var start = new Date(end); start.setDate(start.getDate() - (weeks * 7 - 1));
+
+      // Adjust start to nearest Sunday
+      var dow = start.getDay();
+      start.setDate(start.getDate() - dow);
+
+      var cols = [];
+      var cur = new Date(start);
+      var monthLabels = [];
+      var colIdx = 0;
+      while (cur <= end) {
+        var col = [];
+        for (var d = 0; d < 7; d++) {
+          var key = cur.toISOString().slice(0, 10);
+          var count = act[key] || 0;
+          var inRange = cur <= end;
+          col.push({ key: key, count: count, inRange: inRange, date: new Date(cur) });
+          cur.setDate(cur.getDate() + 1);
+        }
+        // Month label: if first day of col is new month
+        var firstDay = col[0].date;
+        if (colIdx === 0 || firstDay.getDate() <= 7) {
+          monthLabels.push({ col: colIdx, label: firstDay.toLocaleString('default', { month: 'short' }) });
+        }
+        cols.push(col);
+        colIdx++;
+      }
+
+      var maxCount = Math.max(1, ...Object.values(act));
+      function levelClass(count) {
+        if (!count) return '';
+        var pct = count / maxCount;
+        if (pct < 0.25) return 'l1';
+        if (pct < 0.5) return 'l2';
+        if (pct < 0.75) return 'l3';
+        return 'l4';
+      }
+
+      // Build month header using absolute positioning so labels never overflow
+      var totalGridWidth = cols.length * (12 + 3);
+      var monthHtml = '<div style="position:relative;height:16px;width:' + totalGridWidth + 'px;margin-bottom:4px;overflow:hidden">';
+      var lastMonthLabel = '';
+      cols.forEach(function (col, i) {
+        var firstDay = col[0].date;
+        if (firstDay > end) return;
+        var label = firstDay.toLocaleString('default', { month: 'short' });
+        if (label !== lastMonthLabel) {
+          var xPos = i * (12 + 3);
+          // Don't render if too close to the right edge
+          if (xPos < totalGridWidth - 20) {
+            monthHtml += '<span style="position:absolute;left:' + xPos + 'px;font-size:11px;color:var(--text3);white-space:nowrap">' + label + '</span>';
+          }
+          lastMonthLabel = label;
+        }
+      });
+      monthHtml += '</div>';
+
+      var gridHtml = '<div class="tracker-grid">';
+      cols.forEach(function (col) {
+        gridHtml += '<div class="tracker-col">';
+        col.forEach(function (cell) {
+          var cls = 'tracker-cell' + (cell.inRange ? (' ' + levelClass(cell.count)) : '');
+          var title = cell.date.toDateString() + (cell.count ? ': ' + cell.count + ' session' + (cell.count > 1 ? 's' : '') : ': no activity');
+          gridHtml += '<div class="' + cls + '" title="' + title + '"></div>';
+        });
+        gridHtml += '</div>';
+      });
+      gridHtml += '</div>';
+
+      var totalDays = Object.values(act).filter(Boolean).length;
+      var streak = 0;
+      var d = new Date(today);
+      while (true) {
+        var k = d.toISOString().slice(0, 10);
+        if (!act[k]) break;
+        streak++; d.setDate(d.getDate() - 1);
+      }
+
+      return '<div class="tracker-wrap">' +
+        '<h3>Study activity &nbsp;<span style="font-weight:400;color:var(--text3)">' + totalDays + ' days studied &middot; ' + streak + ' day streak</span></h3>' +
+        monthHtml + gridHtml +
+        '<div class="tracker-legend">Less <div class="tracker-cell"></div><div class="tracker-cell l1"></div><div class="tracker-cell l2"></div><div class="tracker-cell l3"></div><div class="tracker-cell l4"></div> More</div>' +
+        '</div>';
+    }
+
+    function logActivity() {
+      var actKey = 'recall-activity';
+      var act = {};
+      try { act = JSON.parse(localStorage.getItem(actKey) || '{}'); } catch (e) { }
+      var today = new Date().toISOString().slice(0, 10);
+      act[today] = (act[today] || 0) + 1;
+      localStorage.setItem(actKey, JSON.stringify(act));
+    }
+
     function renderHome() {
       apiFetch('GET', '/api/sets').then(function (sets) {
         S.sets = sets;
@@ -982,6 +1213,7 @@
 
         el.innerHTML =
           '<div class="page">' +
+          renderTracker() +
           '<div class="home-header"><h1>Your Sets</h1>' +
           '<div style="display:flex;gap:10px">' +
           '<button class="btn btn-secondary" onclick="showImportModal()">&#8595; Import</button>' +
@@ -1053,6 +1285,7 @@
       if (!s) return;
       apiFetch('GET', '/api/progress/' + setId).then(function (prog) {
         S.currentSet = Object.assign({}, s, { prog: prog || {} });
+        logActivity();
         if (mode === 'fc') {
           S.fc = { index: 0, flipped: false, deck: shuffle(s.cards.slice()) };
           S.page = 'fc';
