@@ -169,7 +169,7 @@ function parseQuizletHtml(html) {
     let m;
     while ((m = termBlockRe.exec(html)) !== null) {
       const front = stripTags(m[1]).trim();
-      const back  = stripTags(m[2]).trim();
+      const back = stripTags(m[2]).trim();
       if (front || back) cards.push({ id: cards.length.toString(), front, back });
     }
   }
@@ -237,12 +237,12 @@ function parseQuizletHtml(html) {
 /** Strip HTML tags from a string */
 function stripTags(s) {
   return s.replace(/<style[\s\S]*?<\/style>/gi, ' ')
-          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-          .replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
-          .replace(/\s{2,}/g, '\n')
-          .trim();
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+    .replace(/\s{2,}/g, '\n')
+    .trim();
 }
 
 /**
@@ -278,7 +278,8 @@ function parseTermsPlainText(text) {
     .replace(/You've begun learning[^\n]*/gi, '')
     .replace(/You know these terms[^\n]*/gi, '')
     .replace(/Select these \d+/gi, '')
-    .replace(/Your stats/gi, '');
+    .replace(/Your stats/gi, '')
+    .replace(/^\s*(Edit|Save)\s*$/gim, '');  // remove standalone UI button lines
 
   // Split into lines, remove empties around markers
   const lines = cleaned.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -286,12 +287,13 @@ function parseTermsPlainText(text) {
   let i = 0;
   while (i < lines.length - 1) {
     const front = lines[i];
-    const back  = lines[i + 1];
+    const back = lines[i + 1];
 
     // Heuristic: skip if either "line" looks like a UI label, URL, or section header
     const isJunk = l =>
       /^https?:\/\//.test(l) ||
       /^(Still learning|Mastered|Select these|Your stats|Track progress|Get a hint|Terms in this set|Practice questions|Don't know|Choose an answer|Study using|You can also|Hide definitions|Review with|About us|For Students|For teachers|Resources|Language|© 20)/i.test(l) ||
+      /^(Edit|Save|Preview|Teacher|New folder|Notifications|Home|Your library|Study groups)$/i.test(l) ||  // single UI button/nav words
       /^\d+ \/ \d+$/.test(l) ||           // "1 / 70"
       l.length > 300;                        // suspiciously long = UI fragment
 
@@ -384,10 +386,10 @@ app.post('/api/import', async (req, res) => {
 
         // Find word/term side and definition side by label
         const wordSide = sides.find(s => s.label === 'word') || sides[0];
-        const defSide  = sides.find(s => s.label === 'definition') || sides[1];
+        const defSide = sides.find(s => s.label === 'definition') || sides[1];
 
         const front = wordSide?.media?.[0]?.plainText?.trim() || '';
-        const back  = defSide?.media?.[0]?.plainText?.trim()  || '';
+        const back = defSide?.media?.[0]?.plainText?.trim() || '';
 
         if (front || back) {
           cards.push({ id: String(cards.length), front, back });
